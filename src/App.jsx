@@ -1,17 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 const APP_UPDATED = "May 2026";
 
 // ─── VERIFIED HISTORICAL DATA (Source: NOAA CPC / IRI Columbia) ──────────────
-// Niño 3.4 SST Anomaly (°C): NOAA CPC ERSSTv5, 1991-2020 base period
-// SOI: NOAA CPC standardized SOI, 1991-2020 base period
-// SST Trend: month-over-month delta in Niño 3.4
-// Source: https://www.cpc.ncep.noaa.gov/data/indices/
-//         https://iri.columbia.edu/our-expertise/climate/forecasts/enso/
-
 const HISTORICAL = [
-  // 2020 — La Niña developing through year
   { timestamp:"2020-01-01T00:00:00Z", nino34: 0.5,  soi:  2.1, sst_trend: -0.1, phase:"Neutral",  source:"NOAA CPC" },
   { timestamp:"2020-02-01T00:00:00Z", nino34: 0.5,  soi:  1.8, sst_trend:  0.0, phase:"Neutral",  source:"NOAA CPC" },
   { timestamp:"2020-03-01T00:00:00Z", nino34: 0.4,  soi:  3.2, sst_trend: -0.1, phase:"Neutral",  source:"NOAA CPC" },
@@ -24,7 +17,6 @@ const HISTORICAL = [
   { timestamp:"2020-10-01T00:00:00Z", nino34:-1.2,  soi: 13.5, sst_trend: -0.3, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2020-11-01T00:00:00Z", nino34:-1.3,  soi: 14.8, sst_trend: -0.1, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2020-12-01T00:00:00Z", nino34:-1.3,  soi: 15.1, sst_trend:  0.0, phase:"La Niña",  source:"NOAA CPC" },
-  // 2021 — La Niña, then neutral, weak La Niña return
   { timestamp:"2021-01-01T00:00:00Z", nino34:-1.1,  soi: 13.2, sst_trend:  0.2, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2021-02-01T00:00:00Z", nino34:-0.9,  soi: 10.8, sst_trend:  0.2, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2021-03-01T00:00:00Z", nino34:-0.7,  soi:  8.4, sst_trend:  0.2, phase:"La Niña",  source:"NOAA CPC" },
@@ -37,7 +29,6 @@ const HISTORICAL = [
   { timestamp:"2021-10-01T00:00:00Z", nino34:-0.9,  soi: 10.5, sst_trend: -0.1, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2021-11-01T00:00:00Z", nino34:-0.9,  soi: 11.2, sst_trend:  0.0, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2021-12-01T00:00:00Z", nino34:-1.0,  soi: 12.4, sst_trend: -0.1, phase:"La Niña",  source:"NOAA CPC" },
-  // 2022 — La Niña peak, then slow decay
   { timestamp:"2022-01-01T00:00:00Z", nino34:-1.0,  soi: 12.8, sst_trend:  0.0, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2022-02-01T00:00:00Z", nino34:-1.0,  soi: 13.1, sst_trend:  0.0, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2022-03-01T00:00:00Z", nino34:-1.0,  soi: 12.6, sst_trend:  0.0, phase:"La Niña",  source:"NOAA CPC" },
@@ -50,7 +41,6 @@ const HISTORICAL = [
   { timestamp:"2022-10-01T00:00:00Z", nino34:-1.3,  soi: 15.2, sst_trend: -0.2, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2022-11-01T00:00:00Z", nino34:-1.2,  soi: 14.5, sst_trend:  0.1, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2022-12-01T00:00:00Z", nino34:-1.0,  soi: 12.6, sst_trend:  0.2, phase:"La Niña",  source:"NOAA CPC" },
-  // 2023 — Rapid El Niño development, strong by year end
   { timestamp:"2023-01-01T00:00:00Z", nino34:-0.7,  soi:  8.4, sst_trend:  0.3, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2023-02-01T00:00:00Z", nino34:-0.4,  soi:  4.8, sst_trend:  0.3, phase:"Neutral",  source:"NOAA CPC" },
   { timestamp:"2023-03-01T00:00:00Z", nino34:-0.1,  soi:  1.2, sst_trend:  0.3, phase:"Neutral",  source:"NOAA CPC" },
@@ -63,7 +53,6 @@ const HISTORICAL = [
   { timestamp:"2023-10-01T00:00:00Z", nino34: 2.1,  soi:-16.2, sst_trend:  0.3, phase:"El Niño",  source:"NOAA CPC" },
   { timestamp:"2023-11-01T00:00:00Z", nino34: 2.2,  soi:-17.1, sst_trend:  0.1, phase:"El Niño",  source:"NOAA CPC" },
   { timestamp:"2023-12-01T00:00:00Z", nino34: 2.3,  soi:-17.8, sst_trend:  0.1, phase:"El Niño",  source:"NOAA CPC" },
-  // 2024 — El Niño fades, La Niña develops
   { timestamp:"2024-01-01T00:00:00Z", nino34: 2.0,  soi:-15.2, sst_trend: -0.3, phase:"El Niño",  source:"NOAA CPC" },
   { timestamp:"2024-02-01T00:00:00Z", nino34: 1.5,  soi:-11.8, sst_trend: -0.5, phase:"El Niño",  source:"NOAA CPC" },
   { timestamp:"2024-03-01T00:00:00Z", nino34: 1.0,  soi: -7.4, sst_trend: -0.5, phase:"El Niño",  source:"NOAA CPC" },
@@ -76,7 +65,6 @@ const HISTORICAL = [
   { timestamp:"2024-10-01T00:00:00Z", nino34:-0.9,  soi: 10.1, sst_trend: -0.2, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2024-11-01T00:00:00Z", nino34:-0.9,  soi: 10.8, sst_trend:  0.0, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2024-12-01T00:00:00Z", nino34:-0.8,  soi:  9.9, sst_trend:  0.1, phase:"La Niña",  source:"NOAA CPC" },
-  // 2025 — La Niña fades, rapid El Niño development
   { timestamp:"2025-01-01T00:00:00Z", nino34:-0.6,  soi:  7.8, sst_trend:  0.2, phase:"La Niña",  source:"NOAA CPC" },
   { timestamp:"2025-02-01T00:00:00Z", nino34:-0.5,  soi:  5.9, sst_trend:  0.1, phase:"Neutral",  source:"NOAA CPC" },
   { timestamp:"2025-03-01T00:00:00Z", nino34:-0.3,  soi:  3.2, sst_trend:  0.2, phase:"Neutral",  source:"NOAA CPC" },
@@ -89,7 +77,6 @@ const HISTORICAL = [
   { timestamp:"2025-10-01T00:00:00Z", nino34: 0.2,  soi: -3.5, sst_trend:  0.0, phase:"Neutral",  source:"NOAA CPC" },
   { timestamp:"2025-11-01T00:00:00Z", nino34: 0.3,  soi: -5.1, sst_trend:  0.1, phase:"Neutral",  source:"NOAA CPC" },
   { timestamp:"2025-12-01T00:00:00Z", nino34: 0.3,  soi: -6.2, sst_trend:  0.0, phase:"Neutral",  source:"NOAA CPC" },
-  // 2026 — El Niño rapidly developing (IRI/NOAA CPC May 2026 data)
   { timestamp:"2026-01-01T00:00:00Z", nino34: 0.2,  soi: -4.8, sst_trend: -0.1, phase:"Neutral",  source:"NOAA CPC" },
   { timestamp:"2026-02-01T00:00:00Z", nino34: 0.1,  soi: -3.2, sst_trend: -0.1, phase:"Neutral",  source:"NOAA CPC" },
   { timestamp:"2026-03-01T00:00:00Z", nino34: 0.2,  soi: -4.5, sst_trend:  0.1, phase:"Neutral",  source:"NOAA CPC" },
@@ -99,11 +86,10 @@ const HISTORICAL = [
 
 const STORAGE_KEY = "pf_enso_v4";
 
-// ─── THRESHOLDS ───────────────────────────────────────────────────────────────
 const THRESHOLDS = {
-  nino34:    { min:-2,  max:3,  unit:"°C anomaly", label:"Niño 3.4 SST Anomaly",  detail:"Central Pacific SST deviation. Above +0.5°C weakens trades." },
-  soi:       { min:-25, max:25, unit:"index",       label:"Southern Oscillation Index", detail:"Negative = weakened trade winds. Below -5 = concern." },
-  sst_trend: { min:-1,  max:1,  unit:"°C / month",  label:"SST Anomaly Trend",     detail:"Month-over-month Niño 3.4 change. Rising = worsening." },
+  nino34:    { min:-2,  max:3,  unit:"°C anomaly", label:"Niño 3.4 SST Anomaly",       detail:"Central Pacific SST deviation. Above +0.5°C weakens trades." },
+  soi:       { min:-25, max:25, unit:"index",       label:"Southern Oscillation Index",  detail:"Negative = weakened trade winds. Below -5 = concern." },
+  sst_trend: { min:-1,  max:1,  unit:"°C / month",  label:"SST Anomaly Trend",           detail:"Month-over-month Niño 3.4 change. Rising = worsening." },
 };
 
 const PHASES = {
@@ -118,14 +104,13 @@ const CALLS = {
   HOLD:  { color:"#ef4444", bg:"#1c0707", border:"#dc2626", label:"HOLD",  sub:"Unfavorable ENSO for crossing window" },
 };
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function clr(metric, v) {
   if (metric==="nino34")    return v<=0.5?"#22c55e":v<=1.5?"#f59e0b":"#ef4444";
   if (metric==="soi")       return v>=5?"#22c55e":v>=-5?"#f59e0b":"#ef4444";
   if (metric==="sst_trend") return v<=0?"#22c55e":v<=0.2?"#f59e0b":"#ef4444";
   return "#94a3b8";
 }
-
 function decide(d) {
   if (!d) return null;
   let r=0, y=0;
@@ -134,19 +119,13 @@ function decide(d) {
   if (d.sst_trend>0.2) r++; else if (d.sst_trend>0) y++;
   return r>=2?"HOLD": r>=1||y>=2?"WATCH":"GO";
 }
-
 function fmtMon(iso) {
   return new Date(iso).toLocaleDateString("en-US",{month:"short",year:"2-digit"});
-}
-function fmtFull(iso) {
-  return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})+" "+
-         new Date(iso).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
 }
 function sign(v, metric) {
   if (metric==="soi") return v.toFixed(1);
   return (v>=0?"+":"")+v.toFixed(2);
 }
-
 function loadStored() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"); } catch { return []; }
 }
@@ -154,10 +133,35 @@ function store(arr) {
   try { localStorage.setItem(STORAGE_KEY,JSON.stringify(arr.slice(-120))); } catch {}
 }
 
+// ─── COUNTDOWN to next NOAA update (10th of next month) ──────────────────────
+function useCountdown() {
+  const getTarget = () => {
+    const now = new Date();
+    // NOAA publishes around the 10th — if we're past the 10th, target next month's 10th
+    let target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 10, 18, 0, 0));
+    if (now >= target) {
+      target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth()+1, 10, 18, 0, 0));
+    }
+    return target;
+  };
+  const [timeLeft, setTimeLeft] = useState(() => getTarget() - new Date());
+  useEffect(() => {
+    const id = setInterval(() => setTimeLeft(getTarget() - new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const totalSecs = Math.max(0, Math.floor(timeLeft / 1000));
+  const d = Math.floor(totalSecs / 86400);
+  const h = Math.floor((totalSecs % 86400) / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+  return { d, h, m, s };
+}
+
 // ─── GAUGE ────────────────────────────────────────────────────────────────────
 function Gauge({ metric, value }) {
   const t = THRESHOLDS[metric];
-  const W=200, H=120, cx=100, cy=108, r=78;
+  // Taller SVG with more room above arc for value text
+  const W=200, H=130, cx=100, cy=115, r=78;
   const START=-210, SWEEP=240;
 
   if (value===null||value===undefined) {
@@ -197,25 +201,25 @@ function Gauge({ metric, value }) {
     <div style={{textAlign:"center"}}>
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{overflow:"visible"}}>
         <defs>
-          <filter id={`glow-${metric}`}><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id={`glow-${metric}`}>
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
         </defs>
-        {/* Track background */}
         {segs.map(([f,t2,c],i) => <g key={i}>{arc(f,t2,c)}</g>)}
-        {/* Needle */}
         <line x1={cx} y1={cy} x2={nx} y2={ny}
           stroke="white" strokeWidth="2.5" strokeLinecap="round"
           filter={`url(#glow-${metric})`}
         />
-        {/* Hub */}
         <circle cx={cx} cy={cy} r="6" fill="#0d1f35" stroke="white" strokeWidth="1.5"/>
         <circle cx={cx} cy={cy} r="3" fill="white"/>
-        {/* Value */}
-        <text x={cx} y={cy-24} textAnchor="middle" fill={color}
-          fontSize="20" fontWeight="700" fontFamily="'Space Mono',monospace">
+        {/* Value text — placed well above the arc, inside the open top of the gauge */}
+        <text x={cx} y={cy-38} textAnchor="middle" fill={color}
+          fontSize="22" fontWeight="700" fontFamily="'Space Mono',monospace">
           {sign(value,metric)}
         </text>
-        <text x={cx} y={cy-11} textAnchor="middle" fill="#94a3b8"
-          fontSize="8.5" fontFamily="'Space Mono',monospace">
+        <text x={cx} y={cy-22} textAnchor="middle" fill="#94a3b8"
+          fontSize="9" fontFamily="'Space Mono',monospace">
           {t.unit}
         </text>
       </svg>
@@ -226,53 +230,40 @@ function Gauge({ metric, value }) {
 // ─── SPARKLINE ────────────────────────────────────────────────────────────────
 function Sparkline({ data, metricKey, color, crossingWindow }) {
   const pts = data.filter(d=>d[metricKey]!=null);
-  if (pts.length<2) return <div style={{height:60,display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontSize:"0.65rem",fontFamily:"'Space Mono',monospace"}}>NO DATA</div>;
-
+  if (pts.length<2) return (
+    <div style={{height:60,display:"flex",alignItems:"center",justifyContent:"center",color:"#475569",fontSize:"0.65rem",fontFamily:"'Space Mono',monospace"}}>NO DATA</div>
+  );
   const W=280,H=64,px=10,py=8;
-  const vals = pts.map(d=>d[metricKey]);
-  const times = pts.map(d=>new Date(d.timestamp).getTime());
+  const vals=pts.map(d=>d[metricKey]);
+  const times=pts.map(d=>new Date(d.timestamp).getTime());
   const minV=Math.min(...vals), maxV=Math.max(...vals);
   const minT=Math.min(...times), maxT=Math.max(...times);
   const rV=maxV-minV||1, rT=maxT-minT||1;
-
   const tx=t=>(px+(t-minT)/rT*(W-px*2));
   const ty=v=>(H-py-(v-minV)/rV*(H-py*2));
+  const polyPts=pts.map(d=>`${tx(new Date(d.timestamp).getTime())},${ty(d[metricKey])}`).join(" ");
+  const last=pts[pts.length-1], prev=pts[pts.length-2];
+  const trend=last[metricKey]>prev[metricKey]?"↑":last[metricKey]<prev[metricKey]?"↓":"→";
 
-  const polyPts = pts.map(d=>`${tx(new Date(d.timestamp).getTime())},${ty(d[metricKey])}`).join(" ");
-  const last = pts[pts.length-1];
-  const prev = pts[pts.length-2];
-  const trend = last[metricKey]>prev[metricKey]?"↑":last[metricKey]<prev[metricKey]?"↓":"→";
-
-  // Threshold lines
-  let threshLines = [];
-  if (metricKey==="nino34") {
-    threshLines=[{v:0.5,c:"#f59e0b"},{v:1.5,c:"#ef4444"}];
-  } else if (metricKey==="soi") {
-    threshLines=[{v:5,c:"#22c55e"},{v:-5,c:"#ef4444"}];
-  } else {
-    threshLines=[{v:0,c:"#22c55e"},{v:0.2,c:"#f59e0b"}];
-  }
+  let threshLines=[];
+  if (metricKey==="nino34")    threshLines=[{v:0.5,c:"#f59e0b"},{v:1.5,c:"#ef4444"}];
+  else if (metricKey==="soi")  threshLines=[{v:5,c:"#22c55e"},{v:-5,c:"#ef4444"}];
+  else                         threshLines=[{v:0,c:"#22c55e"},{v:0.2,c:"#f59e0b"}];
 
   return (
     <div>
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:"block"}}>
-        {/* Threshold reference lines */}
         {threshLines.map(({v,c})=>{
-          if (v<minV||v>maxV) return null;
-          const yy=ty(v);
-          return <line key={v} x1={px} y1={yy} x2={W-px} y2={yy} stroke={c} strokeWidth="0.75" strokeDasharray="3,3" opacity="0.5"/>;
+          if(v<minV||v>maxV) return null;
+          return <line key={v} x1={px} y1={ty(v)} x2={W-px} y2={ty(v)} stroke={c} strokeWidth="0.75" strokeDasharray="3,3" opacity="0.5"/>;
         })}
-        {/* Crossing window band — March 2027 */}
-        {crossingWindow && (() => {
-          const wStart=new Date("2027-03-01").getTime();
-          const wEnd=new Date("2027-05-01").getTime();
-          if (wStart>maxT+rT*0.1) return null;
-          const wx1=Math.max(px,tx(wStart)), wx2=Math.min(W-px,tx(wEnd));
+        {crossingWindow&&(()=>{
+          const wS=new Date("2027-03-01").getTime(), wE=new Date("2027-05-01").getTime();
+          if(wS>maxT+rT*0.1) return null;
+          const wx1=Math.max(px,tx(wS)), wx2=Math.min(W-px,tx(wE));
           return <rect x={wx1} y={py} width={Math.max(0,wx2-wx1)} height={H-py*2} fill="#0ea5e9" opacity="0.07"/>;
         })()}
-        {/* Line */}
         <polyline points={polyPts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        {/* Dots */}
         {pts.map((d,i)=>{
           const x=tx(new Date(d.timestamp).getTime()), y=ty(d[metricKey]);
           const isLast=i===pts.length-1;
@@ -288,145 +279,130 @@ function Sparkline({ data, metricKey, color, crossingWindow }) {
   );
 }
 
-// ─── METRIC CARD ──────────────────────────────────────────────────────────────
+// ─── METRIC CARD ─────────────────────────────────────────────────────────────
 function MetricCard({ metric, latest, allData, sourceUrl, rawText }) {
   const [showRaw,setShowRaw]=useState(false);
   const t=THRESHOLDS[metric];
   const value=latest?.[metric]??null;
   const color=value!=null?clr(metric,value):"#1e3a5f";
-  const call=decide(latest);
 
   return (
     <div style={{background:"linear-gradient(145deg,#091a2d,#0d2240)",border:`1px solid ${color}33`,borderRadius:"16px",padding:"1.15rem",boxShadow:`0 4px 24px ${color}0d`}}>
-      <div style={{marginBottom:"0.6rem"}}>
+      <div style={{marginBottom:"0.5rem"}}>
         <div style={{fontSize:"0.58rem",letterSpacing:"0.18em",color:"#94a3b8",textTransform:"uppercase",fontFamily:"'Space Mono',monospace"}}>{t.label}</div>
-        <div style={{fontSize:"0.68rem",color:"#cbd5e1",marginTop:"0.15rem",lineHeight:1.4}}>{t.detail}</div>
+        <div style={{fontSize:"0.68rem",color:"#cbd5e1",marginTop:"0.1rem",lineHeight:1.4}}>{t.detail}</div>
       </div>
-
       <Gauge metric={metric} value={value}/>
-
-      <div style={{marginTop:"0.5rem"}}>
-        <div style={{fontSize:"0.52rem",color:"#94a3b8",marginBottom:"0.25rem",fontFamily:"'Space Mono',monospace",letterSpacing:"0.1em"}}>5-YEAR TREND  <span style={{color:"#0ea5e9",opacity:0.8}}>│ BLUE BAND = MAR–APR 2027 TARGET</span></div>
+      <div style={{marginTop:"0.4rem"}}>
+        <div style={{fontSize:"0.52rem",color:"#94a3b8",marginBottom:"0.2rem",fontFamily:"'Space Mono',monospace",letterSpacing:"0.1em"}}>
+          5-YEAR TREND&nbsp;&nbsp;<span style={{color:"#0ea5e9",opacity:0.8}}>│ BLUE = MAR–APR 2027</span>
+        </div>
         <Sparkline data={allData} metricKey={metric} color={color} crossingWindow={true}/>
       </div>
-
-      {/* Verification */}
-      <div style={{marginTop:"0.75rem",background:"#050f1c",borderRadius:"8px",padding:"0.6rem",fontSize:"0.58rem",fontFamily:"'Space Mono',monospace"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.3rem"}}>
+      <div style={{marginTop:"0.6rem",background:"#050f1c",borderRadius:"8px",padding:"0.55rem",fontSize:"0.58rem",fontFamily:"'Space Mono',monospace"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.25rem"}}>
           <span style={{color:"#94a3b8",letterSpacing:"0.1em"}}>SOURCE VERIFICATION</span>
           {sourceUrl&&<a href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{color:"#38bdf8",textDecoration:"none"}}>VERIFY ↗</a>}
         </div>
         <div onClick={()=>setShowRaw(!showRaw)} style={{color:"#94a3b8",cursor:"pointer",lineHeight:1.5}}>
-          {rawText?(showRaw?rawText:rawText.slice(0,80)+(rawText.length>80?"… [expand]":"")):
-            <span style={{color:"#475569"}}>Tap Fetch to load live source text</span>}
+          {rawText
+            ?(showRaw?rawText:rawText.slice(0,80)+(rawText.length>80?"… [tap to expand]":""))
+            :<span style={{color:"#334155"}}>Tap Fetch to load live source text</span>}
         </div>
       </div>
     </div>
   );
 }
 
-// ─── PHASE TIMELINE ───────────────────────────────────────────────────────────
+// ─── PHASE TIMELINE — tap any bar for tooltip ─────────────────────────────────
 function PhaseTimeline({ data }) {
-  const [heldYear, setHeldYear] = useState(null);
-  const [tooltip, setTooltip]   = useState(null); // {text, x}
-  const holdTimer = useRef(null);
+  const [tapped, setTapped] = useState(null); // {d, x} — the tapped data point
 
   if (!data.length) return null;
-
-  // Group bars by year for year-boundary markers
   const years = [...new Set(data.map(d => d.timestamp.slice(0,4)))];
 
-  function startHold(d, e) {
-    holdTimer.current = setTimeout(() => {
-      const yr = d.timestamp.slice(0,4);
-      setHeldYear(yr);
-      // rough x position from touch/mouse
-      const rect = e.currentTarget.closest(".timeline-track").getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      setTooltip({ text: yr, x: Math.max(20, Math.min(clientX - rect.left, rect.width - 30)) });
-    }, 300);
-  }
-  function endHold() {
-    clearTimeout(holdTimer.current);
-    setHeldYear(null);
-    setTooltip(null);
+  function handleTap(d, e) {
+    e.stopPropagation();
+    const rect = e.currentTarget.closest(".timeline-wrap").getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const x = Math.max(36, Math.min(clientX - rect.left, rect.width - 36));
+    setTapped(prev => prev?.d===d ? null : { d, x });
   }
 
   return (
-    <div style={{background:"#071120",border:"1px solid #0f2744",borderRadius:"12px",padding:"0.9rem",marginBottom:"1rem"}}>
+    <div style={{background:"#071120",border:"1px solid #0f2744",borderRadius:"12px",padding:"0.9rem",marginBottom:"1rem"}}
+      onClick={()=>setTapped(null)}>
       <div style={{fontSize:"0.55rem",letterSpacing:"0.15em",color:"#8ba8c4",fontFamily:"'Space Mono',monospace",marginBottom:"0.6rem"}}>
-        ENSO PHASE HISTORY · <span style={{color:"#475569"}}>PRESS & HOLD TO HIGHLIGHT YEAR</span>
+        ENSO PHASE HISTORY · <span style={{color:"#475569"}}>TAP BAR FOR DETAILS</span>
       </div>
 
-      {/* Bar track */}
-      <div className="timeline-track" style={{position:"relative",userSelect:"none"}}>
+      <div className="timeline-wrap" style={{position:"relative",userSelect:"none"}}>
         {/* Year divider lines */}
-        {years.slice(1).map(yr => {
-          const idx = data.findIndex(d => d.timestamp.slice(0,4) === yr);
-          const pct = (idx / data.length) * 100;
-          return <div key={yr} style={{position:"absolute",left:`${pct}%`,top:0,bottom:0,width:"1px",background:"#020d1a",zIndex:2,pointerEvents:"none"}}/>;
+        {years.slice(1).map(yr=>{
+          const idx=data.findIndex(d=>d.timestamp.slice(0,4)===yr);
+          return <div key={yr} style={{position:"absolute",left:`${(idx/data.length)*100}%`,top:0,bottom:0,width:"1px",background:"#020d1a",zIndex:2,pointerEvents:"none"}}/>;
         })}
 
-        <div style={{display:"flex",gap:"1px",borderRadius:"4px",overflow:"hidden",height:"32px"}}>
-          {data.map((d,i) => {
-            const ph  = d.phase || "Neutral";
-            const pc  = PHASES[ph]?.color || "#f59e0b";
-            const yr  = d.timestamp.slice(0,4);
-            const dim = heldYear && heldYear !== yr;
-            const hi  = heldYear === yr;
+        {/* Bars */}
+        <div style={{display:"flex",gap:"1px",borderRadius:"4px",overflow:"hidden",height:"34px"}}>
+          {data.map((d,i)=>{
+            const ph=d.phase||"Neutral";
+            const pc=PHASES[ph]?.color||"#f59e0b";
+            const isActive=tapped?.d===d;
             return (
               <div key={i}
                 style={{
                   flex:1, minWidth:"2px",
-                  background: pc,
-                  opacity: dim ? 0.12 : hi ? 1 : 0.65,
+                  background:pc,
+                  opacity: tapped ? (isActive?1:0.25) : 0.65,
                   cursor:"pointer",
-                  transition:"opacity 0.15s",
-                  boxShadow: hi ? `0 0 6px ${pc}` : "none",
+                  transition:"opacity 0.1s",
+                  boxShadow:isActive?`0 0 8px ${pc}`:"none",
                 }}
-                onMouseDown={e => startHold(d, e)}
-                onMouseUp={endHold}
-                onMouseLeave={endHold}
-                onTouchStart={e => startHold(d, e)}
-                onTouchEnd={endHold}
-                title={`${fmtMon(d.timestamp)}: ${ph} (${sign(d.nino34,"nino34")}°C)`}
+                onClick={e=>handleTap(d,e)}
+                onTouchEnd={e=>{e.preventDefault();handleTap(d,e);}}
               />
             );
           })}
         </div>
 
-        {/* Floating year tooltip on hold */}
-        {tooltip && (
-          <div style={{
-            position:"absolute", top:"-26px",
-            left: tooltip.x, transform:"translateX(-50%)",
-            background:"#0ea5e9", color:"white",
-            padding:"2px 8px", borderRadius:"4px",
-            fontSize:"0.65rem", fontFamily:"'Space Mono',monospace",
-            fontWeight:"700", pointerEvents:"none", whiteSpace:"nowrap",
-            boxShadow:"0 2px 8px #0ea5e966",
-          }}>
-            {tooltip.text}
-          </div>
-        )}
+        {/* Tap tooltip */}
+        {tapped&&(()=>{
+          const ph=tapped.d.phase||"Neutral";
+          const pc=PHASES[ph]?.color||"#f59e0b";
+          return (
+            <div style={{
+              position:"absolute",top:"-58px",
+              left:tapped.x,transform:"translateX(-50%)",
+              background:"#0d1f35",border:`1px solid ${pc}`,
+              color:"white",padding:"5px 10px",borderRadius:"8px",
+              fontSize:"0.62rem",fontFamily:"'Space Mono',monospace",
+              pointerEvents:"none",whiteSpace:"nowrap",
+              boxShadow:`0 4px 16px ${pc}44`,zIndex:10,
+              lineHeight:1.7,
+            }}>
+              <div style={{color:pc,fontWeight:"700"}}>{fmtMon(tapped.d.timestamp)}</div>
+              <div>{ph}</div>
+              <div>Niño 3.4: {sign(tapped.d.nino34,"nino34")}°C</div>
+              <div>SOI: {sign(tapped.d.soi,"soi")}</div>
+            </div>
+          );
+        })()}
       </div>
 
-      {/* Year labels below */}
+      {/* Year labels */}
       <div style={{display:"flex",justifyContent:"space-between",fontSize:"0.5rem",color:"#8ba8c4",fontFamily:"'Space Mono',monospace",marginTop:"5px"}}>
-        {years.map(yr => <span key={yr} style={{color: heldYear===yr?"#0ea5e9":"#8ba8c4",fontWeight:heldYear===yr?"700":"400",transition:"color 0.15s"}}>{yr}</span>)}
+        {years.map(yr=><span key={yr}>{yr}</span>)}
       </div>
-
       {/* Legend */}
       <div style={{display:"flex",gap:"10px",marginTop:"6px",fontSize:"0.5rem",fontFamily:"'Space Mono',monospace"}}>
-        {Object.entries(PHASES).map(([k,v]) => (
-          <span key={k} style={{color:v.color}}>■ {k}</span>
-        ))}
+        {Object.entries(PHASES).map(([k,v])=><span key={k} style={{color:v.color}}>■ {k}</span>)}
       </div>
     </div>
   );
 }
 
-// ─── DECISION BANNER ──────────────────────────────────────────────────────────
+// ─── DECISION BANNER ─────────────────────────────────────────────────────────
 function DecisionBanner({ call, updatedAt }) {
   if (!call) return null;
   const d=CALLS[call];
@@ -440,35 +416,60 @@ function DecisionBanner({ call, updatedAt }) {
   );
 }
 
+// ─── COUNTDOWN WIDGET ─────────────────────────────────────────────────────────
+function Countdown() {
+  const {d,h,m,s} = useCountdown();
+  const pad = n => String(n).padStart(2,"0");
+  return (
+    <div style={{background:"#071120",border:"1px solid #0f2744",borderRadius:"12px",padding:"0.75rem 0.9rem",marginBottom:"1rem",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div>
+        <div style={{fontSize:"0.52rem",letterSpacing:"0.15em",color:"#94a3b8",fontFamily:"'Space Mono',monospace"}}>NEXT NOAA UPDATE</div>
+        <div style={{fontSize:"0.6rem",color:"#475569",marginTop:"0.1rem",fontFamily:"'Space Mono',monospace"}}>~10th of each month</div>
+      </div>
+      <div style={{display:"flex",gap:"6px",alignItems:"center"}}>
+        {[["D",d],["H",h],["M",m],["S",s]].map(([lbl,val])=>(
+          <div key={lbl} style={{textAlign:"center"}}>
+            <div style={{fontSize:"1.1rem",fontWeight:"700",color:"#0ea5e9",fontFamily:"'Space Mono',monospace",lineHeight:1}}>{pad(val)}</div>
+            <div style={{fontSize:"0.45rem",color:"#334155",fontFamily:"'Space Mono',monospace",letterSpacing:"0.1em"}}>{lbl}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [allData, setAllData]       = useState(()=>{
+  const [allData,setAllData] = useState(()=>{
     const stored=loadStored();
-    // Merge historical + stored, dedup by month
     const combined=[...HISTORICAL,...stored];
     const seen=new Set();
     return combined.filter(d=>{
       const k=d.timestamp.slice(0,7);
-      if (seen.has(k)) return false;
+      if(seen.has(k)) return false;
       seen.add(k); return true;
     }).sort((a,b)=>a.timestamp.localeCompare(b.timestamp));
   });
-  const [loading,setLoading]        = useState(false);
-  const [error,setError]            = useState(null);
-  const [fetchedAt,setFetchedAt]    = useState(null);
-  const [ensoSummary,setEnsoSummary]= useState(null);
-  const [sourceUrls,setSourceUrls]  = useState({});
-  const [rawTexts,setRawTexts]      = useState({});
+  const [loading,setLoading]         = useState(false);
+  const [error,setError]             = useState(null);
+  const [fetchedAt,setFetchedAt]     = useState(null);
+  const [ensoSummary,setEnsoSummary] = useState(null);
+  const [sourceUrls,setSourceUrls]   = useState({});
+  const [rawTexts,setRawTexts]       = useState({});
 
   const latest = allData.length ? allData[allData.length-1] : null;
-  const call    = decide(latest);
+  const call   = decide(latest);
 
   const fetchLive = useCallback(async()=>{
     setLoading(true); setError(null);
     try {
       const resp = await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{
+          "Content-Type":"application/json",
+          "anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true",
+        },
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",
           max_tokens:1000,
@@ -478,20 +479,24 @@ export default function App() {
 2. SOI (Southern Oscillation Index) — latest 30-day or monthly value
 3. SST trend — approximate °C/month change vs prior month (positive=warming)
 4. ENSO phase — exactly one of: El Niño, La Niña, Neutral
-5. A 2-sentence summary of trade wind implications for a March-April 2027 Mexico→Marquesas sailing passage
+5. A 2-sentence summary of trade wind implications for a March-April 2027 Mexico to Marquesas sailing passage
 
 Return ONLY raw JSON (no markdown, no explanation):
 {"nino34":<num>,"nino34_source":"<url>","nino34_raw":"<excerpt under 100 chars>","soi":<num>,"soi_source":"<url>","soi_raw":"<excerpt>","sst_trend":<num>,"sst_trend_source":"<url>","sst_trend_raw":"<excerpt>","enso_phase":"<phase>","enso_phase_source":"<url>","summary":"<2 sentences>"}`}]
         })
       });
-      if (!resp.ok) throw new Error(`API ${resp.status}`);
+      if(!resp.ok){
+        const errBody=await resp.json().catch(()=>({}));
+        throw new Error(errBody?.error?.message||`API error ${resp.status}`);
+      }
       const api=await resp.json();
       const txt=api.content.filter(b=>b.type==="text").map(b=>b.text).join("");
       const m=txt.match(/\{[\s\S]*\}/);
-      if (!m) throw new Error("No JSON in response — try again");
+      if(!m) throw new Error("No JSON in response — try again");
       const p=JSON.parse(m[0]);
-      ["nino34","soi","sst_trend"].forEach(k=>{if(p[k]==null||isNaN(+p[k]))throw new Error(`Missing field: ${k}`)});
-
+      ["nino34","soi","sst_trend"].forEach(k=>{
+        if(p[k]==null||isNaN(+p[k])) throw new Error(`Missing field: ${k}`);
+      });
       const now=new Date().toISOString();
       const point={timestamp:now,nino34:+p.nino34,soi:+p.soi,sst_trend:+p.sst_trend,phase:p.enso_phase,source:"Live NOAA/IRI"};
       const next=[...allData.filter(d=>d.timestamp.slice(0,7)!==now.slice(0,7)),point]
@@ -502,14 +507,15 @@ Return ONLY raw JSON (no markdown, no explanation):
       setEnsoSummary(p.summary);
       setSourceUrls({nino34:p.nino34_source,soi:p.soi_source,sst_trend:p.sst_trend_source,enso_phase:p.enso_phase_source});
       setRawTexts({nino34:p.nino34_raw,soi:p.soi_raw,sst_trend:p.sst_trend_raw});
-    } catch(e){ setError(e.message); }
-    finally{ setLoading(false); }
+    } catch(e){
+      setError(e.message||"Failed to fetch — check connection and retry");
+    } finally{ setLoading(false); }
   },[allData]);
 
   return (
     <div style={{minHeight:"100vh",background:"#020d1a",color:"#e2e8f0",fontFamily:"'DM Sans',sans-serif",padding:"1rem 1rem 3rem",maxWidth:"480px",margin:"0 auto"}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-track{background:#020d1a}
@@ -527,13 +533,10 @@ Return ONLY raw JSON (no markdown, no explanation):
         </div>
       </div>
 
-      {/* Decision */}
       <DecisionBanner call={call} updatedAt={latest?.timestamp}/>
-
-      {/* ENSO Phase timeline */}
       <PhaseTimeline data={allData}/>
+      <Countdown/>
 
-      {/* Summary */}
       {ensoSummary&&(
         <div style={{background:"#071120",border:"1px solid #0f2744",borderRadius:"12px",padding:"0.9rem",marginBottom:"1rem",fontSize:"0.75rem",color:"#7ea8c4",lineHeight:1.7}}>
           <div style={{fontSize:"0.52rem",letterSpacing:"0.15em",color:"#94a3b8",fontFamily:"'Space Mono',monospace",marginBottom:"0.4rem"}}>LIVE ANALYSIS · CROSSING IMPLICATIONS</div>
@@ -555,7 +558,7 @@ Return ONLY raw JSON (no markdown, no explanation):
       {error&&(
         <div style={{background:"#140404",border:"1px solid #7f1d1d",borderRadius:"10px",padding:"0.8rem",marginBottom:"0.9rem",fontSize:"0.65rem",color:"#fca5a5",fontFamily:"'Space Mono',monospace",lineHeight:1.6}}>
           ⚠ {error}
-          <div style={{color:"#94a3b8",marginTop:"0.3rem",fontSize:"0.58rem"}}>Showing historical data. Check connection and retry.</div>
+          <div style={{color:"#94a3b8",marginTop:"0.3rem",fontSize:"0.58rem"}}>Historical data shown. Check connection and retry.</div>
         </div>
       )}
 
@@ -587,11 +590,9 @@ Return ONLY raw JSON (no markdown, no explanation):
         </div>
       </div>
 
-      {/* History table — last 12 months */}
+      {/* History table */}
       <div style={{background:"#071120",border:"1px solid #0f2744",borderRadius:"12px",padding:"0.9rem",marginBottom:"1rem"}}>
-        <div style={{fontSize:"0.52rem",letterSpacing:"0.15em",color:"#94a3b8",fontFamily:"'Space Mono',monospace",marginBottom:"0.6rem"}}>
-          RECENT DATA LOG (LAST 12 MONTHS)
-        </div>
+        <div style={{fontSize:"0.52rem",letterSpacing:"0.15em",color:"#94a3b8",fontFamily:"'Space Mono',monospace",marginBottom:"0.6rem"}}>RECENT DATA LOG (LAST 12 MONTHS)</div>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.58rem",fontFamily:"'Space Mono',monospace"}}>
             <thead>
@@ -603,8 +604,7 @@ Return ONLY raw JSON (no markdown, no explanation):
             </thead>
             <tbody>
               {[...allData].slice(-12).reverse().map((d,i)=>{
-                const c=decide(d); const cl=CALLS[c]; const ph=d.phase||"";
-                const pc=PHASES[ph]?.color||"#94a3b8";
+                const c=decide(d),cl=CALLS[c],ph=d.phase||"",pc=PHASES[ph]?.color||"#94a3b8";
                 return (
                   <tr key={i} style={{borderBottom:"1px solid #050f1c"}}>
                     <td style={{padding:"0.25rem 0.3rem",color:"#e2e8f0",whiteSpace:"nowrap"}}>{fmtMon(d.timestamp)}</td>
@@ -639,7 +639,7 @@ Return ONLY raw JSON (no markdown, no explanation):
         SOURCES: NOAA CPC · IRI COLUMBIA · AUSTRALIA BOM<br/>
         HISTORICAL DATA VERIFIED JAN 2020 – MAY 2026<br/>
         VERIFY ALL VALUES AT SOURCE BEFORE ANY PASSAGE DECISION<br/>
-        <span style={{color:"#1e3a5f"}}>v{APP_VERSION} · {APP_UPDATED} · github.com/Powerflow-Marine/go-no-go-pacific</span>
+        <span style={{color:"#334155"}}>v{APP_VERSION} · {APP_UPDATED} · github.com/PFMjackEE/go-no-go-pacific</span>
       </div>
     </div>
   );
